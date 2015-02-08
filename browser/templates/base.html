@@ -12,7 +12,11 @@
 
         <link rel="stylesheet" href="static/styles/normalize.css">
         <link rel="stylesheet" href="static/styles/main.css">
-        <script src="static/js/app.js"></script>
+	<script type="text/javascript" src="//code.jquery.com/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mousetrap/1.4.6/mousetrap.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mousetrap/1.4.6/mousetrap-global-bind.min.js"></script>
+	<script type="text/javascript" src="/static/scripts/isfahan.js"></script>
     </head>
     <body>
         <!--[if lt IE 8]>
@@ -46,12 +50,11 @@
 	    </div>
 	  </header>
 
-	  <div id="canvas">
-	  </div>
+	  <div id="canvas"></div>
 
 	  <footer>
-	    <div id="omnibox">
-	      M-x
+	    <div id="cli">
+	      <input id="omnibox" placeholder="M-x" type="text"/>
 	    </div>
 
 	    <div id="workspaces">
@@ -60,11 +63,7 @@
 	  </footer>
 	</div>
 
-        <script src="//ajax.googleapis.com/ajax/libs/jquery/{{JQUERY_VERSION}}/jquery.min.js"></script>
-        <script>window.jQuery || document.write('<script src="js/vendor/jquery-{{JQUERY_VERSION}}.min.js"><\/script>')</script>
-        <script src="js/plugins.js"></script>
-        <script src="js/main.js"></script>
-
+	<script type="text/javascript" src="static/scripts/twm.js"></script>
         <!-- Google Analytics: change UA-XXXXX-X to be your site's ID. -->
         <script>
             (function(b,o,i,l,e,r){b.GoogleAnalyticsObject=l;b[l]||(b[l]=
