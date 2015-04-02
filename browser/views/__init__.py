@@ -12,6 +12,16 @@
 
 from flask import render_template
 from flask.views import MethodView
+from flask.ext.routing import rest_api
+
+class Bookmarks(MethodView):
+
+    def get(self):
+        pass
+
+    @rest_api
+    def post(self):
+        pass
 
 class Base(MethodView):
     def get(self, uri=None):

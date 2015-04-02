@@ -295,9 +295,16 @@ textarea {
 }
 
 header {
+    background: #3a96ea; /* Old browsers */
+    background: -moz-linear-gradient(top, #3a96ea 0%, #2989d8 42%, #207cca 62%, #0b74a8 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#3a96ea), color-stop(42%,#2989d8), color-stop(62%,#207cca), color-stop(100%,#0b74a8)); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top, #3a96ea 0%,#2989d8 42%,#207cca 62%,#0b74a8 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top, #3a96ea 0%,#2989d8 42%,#207cca 62%,#0b74a8 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top, #3a96ea 0%,#2989d8 42%,#207cca 62%,#0b74a8 100%); /* IE10+ */
+    background: linear-gradient(to bottom, #3a96ea 0%,#2989d8 42%,#207cca 62%,#0b74a8 100%); /* W3C */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#3a96ea', endColorstr='#0b74a8',GradientType=0 ); /* IE6-9 */
     position: fixed;
     height: 73px;
-    background-color: #3A96EA;
     width: 100%;
     padding: 0px;
 }
@@ -447,10 +454,15 @@ footer {
 }
 
 .layout-slot {
-    border: 1px solid #EDEDED;
+    border: 2px solid #999;
     position: absolute;
     overflow: hidden;
-    //background-color: green;
+    background-color: #EEE;
+}
+
+.selected {
+    background-color: #FFF;
+    border: 2px solid yellow;
 }
 
 .workspace-container {
