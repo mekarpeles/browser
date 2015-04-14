@@ -333,7 +333,7 @@ browser.workspace = new Workspace({
   layoutDescription: {type: "row"}
 });
 
-function keybindings() {
+(function keybindings() {
   var keys = {
     'h': 'l',
     'j': 'u',
@@ -360,4 +360,4 @@ function keybindings() {
   Mousetrap.bindGlobal(['meta+x', 'alt+x'], function(e) {
     $('#omnibox').select();
   });
-}();
+})();
