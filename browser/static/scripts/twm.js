@@ -1,59 +1,24 @@
-var Omnibar = function() {}
-Omnibar.prototype = {}
-
-var Collection = function() {}
-Collection.prototype = {}
-
-var Resource = function () {}
-Resource.prototype = {}
-
-var Buffer = function() {
-  return {
-    title: '',
-    url: '',
-    rc: null
-  };
-};
-Buffer.prototype = {
-  setUrl: function() {},
-  kill: function() {}
-}
-
 // This is a physical Slot/Window of the Workspace
 var Window = function(options) {
   return {
-    buffer: null,
+    buffer: null, // pointer to a content buffer
     slotID: options.slotID,
     appendTo: options.appendTo,
   }
 };
 Window.prototype = {
+  setBuffer: function(buffer) {
+    this.buffer = buffer;
+  }
 }
 
-
-var Browser = {
-  omnibar: new Omnibar(),
-  
-  // Set active resources
-  mutexes: {
-    ws: 0, // workspaces
-    co: 0, // collections
-    wd: null  // window
-  },
-  
-  workspaces: [],
-  collections: [],
-  buffers: {},
-  windows: {},
-
-  uuid: function() {
-    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-      return v.toString(16);
-    });
-  },
-
-  addWindow: function(d, parent, slots) {
+var Browser = function(){
+  workspace: null
+};
+Browser.prototype = {
+  // Workspace Interface method implemented by Browser as a callback
+  // to addNode
+  addWindow: function(d, parent, workspace) {
     var $container = jQuery(parent);
     $('.layout-slot').removeClass('selected');
     $container.addClass('selected');
@@ -61,38 +26,48 @@ var Browser = {
       slotID: d.id,
       appendTo: parent
     });
-    this.mutexes.wd = w;
-    this.windows[d.id] = w;
-    this.mutexes
-    slots.push(w);
+
+    // Add to the Windows managed by browser
+    workspace.windows.push(w)
+    workspace.selected = w;
   },
 
+  // Workspace Interface method implemented by Browser as a callback
+  // to removeNode
   rmWindow: function(d, container) {
     var $vp = jQuery(container);
     $('.layout-slot').removeClass('selected');
-    // how to get sybling of wd w/ d.id?
-    this.mutexes.wd = this.windows[Object.keys(this.windows)[0]];
+
+    // d.id is the id of the window.
+    // we can fetch the window and call
+    // this.workspace.remove(window)
+    this.workspace;
+    
+    // this.windows[this.mutexes.ws] = this.windows[Object.keys(this.windows)[0]];
+
+    // get window
+    // add to this.workspace.selected
     $vp.addClass('selected');
   }
-};
+}
 
 Workspace = function(options) {
-  jQuery.extend(true, this, {
-    workspaceSlotCls: 'slot',
-    focusedSlot: null,
-    slots: [],
+  jQuery.extend(true, this, {    
+    selected: null, // a window
+
     windows: [],
+
     parent: null,
     appendTo: null,  
-    layoutDescription: null
+    layoutDescription: null    
   }, options);
 
   this.element  = this.element || jQuery('<div class="workspace-container" id="workspace">');
   this.init();
-
 };
 
 Workspace.prototype = {
+
   init: function () {
     this.element.appendTo(this.appendTo);
     this.calculateLayout();
@@ -116,18 +91,38 @@ Workspace.prototype = {
     //jQuery.publish(prop + '.set', value);
   },
 
-  calculateLayout: function(resetting) {
-    var _this = this,
-    layout;
+  // Defines Node data structure on workspace
+  Node: function() {
+    var ws = this;
+    var Node = function(type, parent) {
+      this.ws = ws;
+      this.type = type;
+      this.id = this.uuid();
+      
+      if (parent) { this.parent = parent; }
+    }
+    Node.prototype = {
+      uuid: function() {
+	'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	  var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+	  return v.toString(16);
+	});
+      },
+    }
+    return Node;
+  }(),
 
-    _this.layout = layout = new Isfahan({
+  calculateLayout: function() {
+    var _this = this;
+
+    _this.layout = new Isfahan({
       containerId: _this.element.attr('id'),
       layoutDescription: _this.layoutDescription,
       configuration: null,
       padding: 0
     });
 
-    var data = layout.filter( function(d) {
+    var data = _this.layout.filter( function(d) {
       return !d.children;
     });
 
@@ -148,7 +143,7 @@ Workspace.prototype = {
       .each(function(d) {
 	var appendTo = _this.element.children('div')
 	  .filter('[data-layout-slot-id="' + d.id + '"]')[0];
-	Browser.addWindow(d, appendTo, _this.slots);
+	_this.parent.addWindow(d, appendTo, _this);
       });
 
     // Exit
@@ -160,7 +155,7 @@ Workspace.prototype = {
 	var parents = _this.element.parent('div')
 	  .filter('[data-layout-slot-id="' + d.id + '"]');	
 	var container = siblings.length ? siblings[0] : parents[0];
-	Browser.rmWindow(d, container);
+	_this.parent.rmWindow(d, container);
       });
 
     function cell() {
@@ -171,20 +166,35 @@ Workspace.prototype = {
 	.style("height", function(d) { return Math.max(0, d.dy ) + "px"; });
     }
 
-    var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-    //jQuery.publish("layoutChanged", root);
+    var root = jQuery.grep(
+      _this.layout, function(node) {
+	return !node.parent;
+      })[0];
+  },
+
+  /*
+    Changes focus to the specified targetSlot or, the slot to the
+    `direction` ∈ ['l' | 'u' | 'r' | 'd'] of targetSlot.
+   */
+  select: function(targetSlot, direction) {
+    if (!direction) {
+      console.log('select');
+    }
   },
 
   split: function(targetSlot, direction) {
     var _this = this,
-    node = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0];
+    node = jQuery.grep(
+      _this.layout, function(node) {
+	return node.id === targetSlot.slotID;
+      })[0];
     nodeIndex = node.parent ? node.parent.children.indexOf(node) : 0,
     nodeIsNotRoot = node.parent;
 
     function addSibling(node, indexDifference) {
       if (nodeIsNotRoot) {
 	var siblingIndex = nodeIndex + indexDifference,
-	newSibling = _this.newNode(node.type, node);
+	newSibling = new _this.Node(node.type, node);
 
 	node.parent.children.splice(siblingIndex, 0, newSibling);
 	_this.layout.push(newSibling);
@@ -200,7 +210,7 @@ Workspace.prototype = {
       // Locally mutate the tree to accomodate a 
       // sibling of another kind, transforming
       // both the target node and its parent.
-      var newParent = _this.newNode(node.type, node.parent);
+      var newParent = new _this.Node(node.type, node.parent);
 
       // Flip its type while keeping
       // the same id.
@@ -208,12 +218,13 @@ Workspace.prototype = {
 
       // Create a new node (which will be childless)
       // that is also a sibling of this node.
-      newSibling = _this.newNode(node.type, newParent);
+      newSibling = new _this.Node(node.type, newParent);
 
       // maintain array ordering.
       newParent.children = [];
       newParent.children.push(node); // order matters, place node first.
-      newParent.children.splice(indexDifference, 0, newSibling); // order matters, so put new sibling on one side or the other.
+      // order matters, so put new sibling on one side or the other.
+      newParent.children.splice(indexDifference, 0, newSibling); 
       if (nodeIsNotRoot) {
 	newParent.parent = node.parent;
 	// replace the old node in its parent's child
@@ -275,26 +286,6 @@ Workspace.prototype = {
 
   },
 
-  splitRight: function(targetSlot) {
-    var _this = this;
-    _this.split(targetSlot, 'r');
-  },
-
-  splitLeft: function(targetSlot) {
-    var _this = this;
-    _this.split(targetSlot, 'l');
-  },
-
-  splitUp: function(targetSlot) {
-    var _this = this;
-    _this.split(targetSlot, 'u');
-  },
-
-  splitDown: function(targetSlot) {
-    var _this = this;
-    _this.split(targetSlot, 'd');
-  },
-
   removeNode: function(targetSlot) {
     // de-mutate the tree structure.
     var _this = this,
@@ -313,7 +304,6 @@ Workspace.prototype = {
       // IDs.
       node.parent.children.splice(nodeIndex,1);
       remainingNode = node.parent.children[0];
-
       remainingNode.parent.id = remainingNode.id;
       delete node.parent;
     } else if (node.parent.children.length === 1) { 
@@ -328,209 +318,46 @@ Workspace.prototype = {
     _this.calculateLayout();
   },
 
-  newNode: function(type, parent) {
-    if (typeof parent === 'undefined') {
-      return {
-	type: type,
-	id: Browser.uuid()
-      };
-    } else {
-      return {
-	type: type,
-	id: Browser.uuid(),
-	parent: parent
-      };
-    }
-  },
-
-  getSlotFromAddress: function(address) {
-    var _this = this;
-    return _this.slots.filter(function(slot) {
-      return slot.layoutAddress === address;
-    })[0];
-  },
-
-  resetLayout: function(layoutDescription) {
-    this.layoutDescription = layoutDescription;
-    this.calculateLayout(true);
-    this.placeWindows();
-  },
-
-  placeWindows: function() {
-    // take the windows array and place
-    // as many windows into places as can 
-    // fit.
-    var _this = this,
-    deletedWindows;
-
-    if (_this.windows.length > _this.slots.length) {
-      // splice modifies the original array and 
-      // returns the deleted items, 
-      // so we can just perform a forEach on the 
-      // return value, and have the saveController
-      // remove these windows in response to the event
-      // (which otherwise it would not do).
-      //
-      // The event was not called in the calculateLayout
-      // function because we need the other windows to remain,
-      // so we filter them here.
-      _this.windows.splice(0, _this.windows.length -_this.slots.length).forEach(function(removedWindow){
-	//jQuery.publish('windowRemoved', removedWindow.id);
-      });
-    }
-
-    _this.windows.forEach(function(window) {
-      var slot = _this.getAvailableSlot();
-      slot.window = window;
-
-      window.update({
-	id: window.id, 
-	slotAddress: slot.layoutAddress, 
-	parent: slot,
-	appendTo: slot.element,
-	currentCanvasID: window.currentCanvasID,
-	currentFOcus: window.currentFocus
-      });
-    });
-  },
-
-  getAvailableSlot: function() {
-    return this.slots.filter(function(slot) {
-      return !slot.window;
-    })[0];
-  },
-
   bindEvents: function() {
     var _this = this;
-
     d3.select(window).on('resize', function(event) {
       _this.calculateLayout();
     });
-
-    /*jQuery.subscribe('manifestQueued', function(event, manifestPromise) {
-    // Trawl windowObjects preemptively for slotAddresses and
-    // notify those slots to display a "loading" state.
-    // Similar to the operation of the manifestLoadStatusIndicator
-    // and its associated manifestList controller.
-    var targetSlot;
-
-    if (_this.parent.windowObjects) {
-    var check = _this.parent.windowObjects.forEach(function(windowConfig, index) {
-    // windowConfig.slotAddress will give the slot;
-    // change the state on that slot to be "loading"
-    if (windowConfig.slotAddress) {
-    targetSlot = _this.getSlotFromAddress(windowConfig.slotAddress);
-    } else {
-    targetSlot = _this.focusedSlot || _this.slots.filter(function(slot) {
-    return slot.hasOwnProperty('window') ? true : false;
-    })[0];
-    }
-    });
-    }
-    });
-    */
-
-    /*jQuery.subscribe('windowRemoved', function(windowId) {
-      var remove = _this.windows.map(function(window) {
-      return window.id !== windowId;
-      })[0],
-      spliceIndex = _this.windows.indexOf(remove);
-      _this.windows.splice(spliceIndex, 0);
-      });
-    */
-  },
-
-
-  clearSlot: function(slotId) {
-    if (this.slots[slodId].windowElement) { 
-      this.slots[slotId].windowElement.remove();
-    }
-    this.slots[slotId].window = null;
-  },
-
-  addItem: function(slot) {
-    this.focusedSlot = slot;
-    this.parent.toggleLoadWindow();
-  },
-
-  addWindow: function(windowConfig) {
-    // Windows can be added from a config,
-    // from a saved state, (in both those cases they are in the form of "windowObjects")
-    // from the workspace windows list after a grid layout change,
-    // from the manifests panel in image mode,
-    // or from the manifests panel in thumbnail mode.
-    var _this = this,
-    newWindow;
-
-    jQuery.each(_this.parent.overlayStates, function(oState, value) {
-      // toggles the other top-level panels closed and focuses the
-      // workspace. For instance, after selecting an object from the
-      // manifestPanel.
-      _this.parent.set(oState, false, {parent: 'overlayStates'});
-    });
-
-    if (windowConfig.slotAddress) {
-      targetSlot = _this.getSlotFromAddress(windowConfig.slotAddress);
-    } else {
-      targetSlot = _this.focusedSlot || _this.getAvailableSlot();
-    }
-
-    windowConfig.appendTo = targetSlot.element;
-    windowConfig.parent = targetSlot;
-
-    if (!targetSlot.window) {
-      windowConfig.slotAddress = targetSlot.layoutAddress;
-      windowConfig.id = windowConfig.id || Browser.uuid();
-
-      //jQuery.publish("windowAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
-
-      newWindow = new $.Window(windowConfig);
-      _this.windows.push(newWindow);
-
-      targetSlot.window = newWindow;
-
-      // This needs to be called after the window is visible so that the thumbnail position is not 0,0 and therefore can be scrolled
-      //
-      // Yeah, I think the source of the problem was that the element was being appended later than the canvas update call, which was never received by anything.
-      //jQuery.publish(('currentCanvasIDUpdated.' + windowConfig.id), windowConfig.currentCanvasID);
-    } else {
-      targetSlot.window.element.remove();        
-      targetSlot.window.update(windowConfig);
-      //jQuery.publish(('currentCanvasIDUpdated.' + windowConfig.id), windowConfig.currentCanvasID);
-      // The target slot already has a window in it, so just update that window instead, 
-      // using the appropriate saving functions, etc. This obviates the need changing the 
-      // parent, slotAddress, setting a new ID, and so on.
-    }
   }
 };
 
-Browser.workspaces.push(new Workspace({
-  workspaceSlotCls: 'slot',
-  focusedSlot: null,
+var browser = new Browser();
+browser.workspace = new Workspace({
+  parent: browser,
   appendTo: jQuery('#canvas'),
   layoutDescription: {type: "row"}
-}));
-
-Mousetrap.bindGlobal(['meta+x', 'alt+x'], function(e) {
-  $('#omnibox').select();
 });
 
-Mousetrap.bindGlobal(['meta+h', 'alt+h'], function(e) {
-  Browser.workspaces[Browser.mutexes.ws].splitLeft(Browser.mutexes.wd);
-});
+function keybindings() {
+  var keys = {
+    'h': 'l',
+    'j': 'u',
+    'k': 'd',
+    'l': 'r'
+  };
+  Object.keys(keys).forEach(function(key) {
+    Mousetrap.bindGlobal(['meta+' + key, 'alt+' + key], function(e) {
+      var ws = browser.workspace;
+      console.log(key, keys[key]);
+      ws.split(ws.selected, keys[key]);
+    });
+    Mousetrap.bindGlobal(['command+' + key, 'ctrl+' + key], function(e) {
+      var ws = browser.workspace;
+      ws.select(ws.selected,  keys[key]);
+    });
+  })
 
-Mousetrap.bindGlobal(['meta+j', 'alt+j'], function(e) {
-  Browser.workspaces[Browser.mutexes.ws].splitDown(Browser.mutexes.wd);
-});
+  Mousetrap.bindGlobal(['meta+r', 'alt+r'], function(e) {
+    var ws = browser.workspace;
+    ws.removeNode(ws.selected);
+  });
 
-Mousetrap.bindGlobal(['meta+k', 'alt+k'], function(e) {
-  Browser.workspaces[Browser.mutexes.ws].splitUp(Browser.mutexes.wd);
-});
-
-Mousetrap.bindGlobal(['meta+l', 'alt+l'], function(e) {
-  Browser.workspaces[Browser.mutexes.ws].splitRight(Browser.mutexes.wd);
-});
-
-Mousetrap.bindGlobal(['meta+r', 'alt+r'], function(e) {
-  Browser.workspaces[Browser.mutexes.ws].removeNode(Browser.mutexes.wd);
-});
+  Mousetrap.bindGlobal(['meta+x', 'alt+x'], function(e) {
+    $('#omnibox').select();
+  });
+}();
